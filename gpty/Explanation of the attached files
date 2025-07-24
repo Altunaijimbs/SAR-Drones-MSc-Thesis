@@ -1,1 +1,23 @@
+This document describes the contents of the `gpty` folder.
 
+Files and folders:
+
+- **airsim_capture.py** – Captures an image from AirSim using camera 0, saves it as a PNG and prints the drone position and altitude.
+- **camstest.py** – Retrieves an image from the drone's front camera in AirSim and stores it locally.
+- **customp.py** – PX4 script that flies to a random waypoint while checking LiDAR for obstacles and searching for a safe landing spot.
+- **flight1.py** – Moves a PX4 drone toward `x=10` with continuous LiDAR based obstacle checks and climbs when needed.
+- **leader_follower_detect_orange.py** – Runs two drones in leader–follower formation and looks for an orange sphere using their cameras.
+- **leader_two_followers.py** – Leader with two followers. Uses distance sensors for avoidance and also searches for an orange target.
+- **leader_two_followers.txt** – Empty placeholder text file.
+- **lidart.py** – Grabs a LiDAR point cloud and displays it with matplotlib in a 3‑D scatter plot.
+- **livelidar.py** – Uses Dash to stream LiDAR data live in a web browser via Plotly.
+- **open3.py** – Converts LiDAR points to an Open3D point cloud and visualizes them, coloring by height.
+- **plott.py** – Fetches LiDAR data from two sensors on the PX4 drone and saves interactive Plotly HTML plots.
+- **random_waypoint_landing.py** – Selects a random waypoint, navigates there while avoiding obstacles and lands when the ground is clear.
+- **testi.py** – Prints the path of the installed AirSim Python package.
+- **triangle_drones.py** – Demonstrates three drones taking off, hovering at staggered altitudes to form a triangle and landing.
+- **working json.txt** – Example AirSim settings JSON for a PX4 vehicle.
+- **advanced gpty/** – Folder containing a small Visual Studio project:
+    - `flight1/flight1.py` – Similar to `flight1.py` but written for that project structure and with simple LiDAR obstacle avoidance.
+    - `flight1/flight1.pyproj` and `flight1.sln` – Visual Studio project and solution files.
+- **__pycache__/** – Python bytecode cache containing `open3d.cpython-310.pyc`.
