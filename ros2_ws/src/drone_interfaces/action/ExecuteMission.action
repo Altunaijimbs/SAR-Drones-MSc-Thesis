@@ -1,0 +1,21 @@
+# Goal
+drone_interfaces/WaypointList mission
+bool allow_obstacle_avoidance
+float32 max_velocity  # m/s
+---
+# Result
+bool success
+string message
+int32 waypoints_completed
+float32 total_distance_traveled  # meters
+float32 total_time  # seconds
+string[] events  # log of significant events during mission
+---
+# Feedback
+int32 current_waypoint_index
+int32 total_waypoints
+float32 progress_percentage
+geometry_msgs/Point current_position
+geometry_msgs/Point target_position
+float32 distance_to_waypoint
+string current_action  # FLYING_TO_WAYPOINT, AVOIDING_OBSTACLE, HOVERING

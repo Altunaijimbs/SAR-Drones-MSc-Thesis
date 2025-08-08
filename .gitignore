@@ -1,0 +1,81 @@
+# ROS2 Build Artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+*.bag
+*.db3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# AirSim/UE5
+airsim_native_workspace/settings.json.backup
+Screenshots/
+Saved/
+Binaries/
+Intermediate/
+*.sln
+*.suo
+*.vsidx
+
+# YOLO Models (large files)
+*.pt
+*.onnx
+*.engine
+!yolov8s.pt  # Keep the small model
+
+# Logs
+*.log
+logs/
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Video files (large)
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Documentation builds
+docs/_build/
+*.pdf
+
+# Secret files
+*.key
+*.pem
+.env.local
+secrets.json
+
+# OS Files
+Thumbs.db
+desktop.ini
+
+# Project specific
+Updates/*.mp4
+Updates/*.avi
+pattern_comparison_*/
+executor_comparison_*.txt
+banked_executor_test_*.txt
+final_executor_test_*.txt

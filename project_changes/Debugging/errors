@@ -1,0 +1,30 @@
+drone not responding to search commands, i think the issue is with keep alive node as it kills any published command after 3 seconds. drone is moving forward and to the right just fine and bellow are possible reasons in addition to what i said. 
+
+
+
+---------------------
+mavros node showing this warning:
+
+[WARN] [1754111011.565871019] [mavros.local_position]: New subscription discovered on topic '/mavros/local_position/pose', requesting incompatible QoS. No messages will be sent to it. Last incompatible policy: RELIABILITY_QOS_POLICY
+----------------
+search pattern with avoidance output
+
+mbs@mbs:~/SAR-Drones-MSc-Thesis/ros2_ws$ ros2 launch search_patterns search_with_avoidance.launch.py
+[INFO] [launch]: All log files can be found below /home/mbs/.ros/log/2025-08-02-09-03-30-753301-mbs-13705
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [grid_search-1]: process started with pid [13706]
+[INFO] [search_pattern_manager-2]: process started with pid [13708]
+[INFO] [obstacle_avoidance-3]: process started with pid [13710]
+[INFO] [velocity_multiplexer-4]: process started with pid [13712]
+[velocity_multiplexer-4] [INFO] [1754111011.368493560] [velocity_multiplexer]: Velocity Multiplexer initialized
+[search_pattern_manager-2] [INFO] [1754111011.371344963] [search_pattern_manager]: Search Pattern Manager initialized
+[obstacle_avoidance-3] [INFO] [1754111011.385605453] [obstacle_avoidance_node]: Obstacle Avoidance Node initialized
+[grid_search-1] [INFO] [1754111011.390079215] [grid_search_node]: Grid Search Node initialized
+[grid_search-1] [WARN] [1754111012.063297489] [grid_search_node]: New publisher discovered on topic '/mavros/local_position/pose', offering incompatible QoS. No messages will be received from it. Last incompatible policy: RELIABILITY
+-----------------------------------------
+lidar sensor not showing up 
+mbs@mbs:~$ ros2 topic echo /airsim_node/PX4/LidarSensor1/point_cloud
+WARNING: topic [/airsim_node/PX4/LidarSensor1/point_cloud] does not appear to be published yet
+Could not determine the type for the passed topic
+
+

@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist, Vector3
+from drone_interfaces.msg import ObstacleArray, Obstacle
+from std_msgs.msg import Bool
+import math
+from enum import Enum
+
+
+class AvoidanceAction(Enum):
+    NONE = 0
+    STOP = 1
+    SLOW_DOWN = 2
+    TURN_LEFT = 3
+    TURN_RIGHT = 4
+    GO_UP = 5
+    GO_DOWN = 6
+    EMERGENCY_STOP = 7
+
+
+class ObstacleAvoidanceNode(Node):
+    def __init__(self):
+        super().__init__('obstacle_avoidance_node')
+        
+        # Parameters
+        self.declare_parameter('safety_distance', 3.0)  # meters
+        self.declare_parameter('critical_distance', 1.5)  # meters
+        self.declare_parameter('max_speed', 3.0)  # m/s
+        self.declare_parameter('avoidance_speed', 1.0)  # m/s
+        self.declare_parameter('vertical_clearance', 2.0)  # meters above obstacle
+        
+        # Get parameters
+        self.safety_distance = self.get_parameter('safety_distance').value
+        self.critical_distance = self.get_parameter('critical_distance').value
+        self.max_speed = self.get_parameter('max_speed').value
+        self.avoidance_speed = self.get_parameter('avoidance_speed').value
+        self.vertical_clearance = self.get_parameter('vertical_clearance').value
+        
+        # Subscribers
+        self.obstacle_sub = self.create_subscription(
+            ObstacleArray,
+            '/drone/obstacles',
+            self.obstacle_callback,
+            10
+        )
+        
+        self.cmd_vel_sub = self.create_subscription(
+            Twist,
+            '/mavros/setpoint_velocity/cmd_vel_unstamped',
+            self.cmd_vel_callback,
+            10
+        )
+        
+        # Publishers
+        self.safe_vel_pub = self.create_publisher(
+            Twist,
+            '/mavros/setpoint_velocity/cmd_vel_unstamped_safe',
+            10
+        )
+        
+        self.avoidance_status_pub = self.create_publisher(
+            Bool,
+            '/drone/obstacle_avoidance_active',
+            10
+        )
+        
+        # State
+        self.current_obstacles = []
+        self.requested_velocity = Twist()
+        self.avoidance_active = False
+        
+        # Safety timer - runs at 20Hz
+        self.safety_timer = self.create_timer(0.05, self.safety_check)
+        
+        self.get_logger().info('Obstacle Avoidance Node initialized')
+    
+    def obstacle_callback(self, msg: ObstacleArray):
+        """Update obstacle list"""
+        self.current_obstacles = msg.obstacles
+    
+    def cmd_vel_callback(self, msg: Twist):
+        """Intercept velocity commands"""
+        self.requested_velocity = msg
+    
+    def safety_check(self):
+        """Main safety loop - check for obstacles and modify velocity if needed"""
+        safe_velocity = self.calculate_safe_velocity()
+        
+        # Publish safe velocity
+        self.safe_vel_pub.publish(safe_velocity)
+        
+        # Publish avoidance status
+        status_msg = Bool()
+        status_msg.data = self.avoidance_active
+        self.avoidance_status_pub.publish(status_msg)
+    
+    def calculate_safe_velocity(self) -> Twist:
+        """Calculate safe velocity based on obstacles"""
+        if not self.current_obstacles:
+            self.avoidance_active = False
+            return self.requested_velocity
+        
+        # Analyze obstacles
+        action, closest_obstacle = self.analyze_obstacles()
+        
+        # Apply avoidance action
+        if action == AvoidanceAction.NONE:
+            self.avoidance_active = False
+            return self.requested_velocity
+        else:
+            self.avoidance_active = True
+            return self.apply_avoidance_action(action, closest_obstacle)
+    
+    def analyze_obstacles(self) -> tuple:
+        """Analyze obstacles and determine avoidance action"""
+        closest_obstacle = None
+        min_distance = float('inf')
+        
+        # Find closest obstacle in path
+        for obstacle in self.current_obstacles:
+            # Calculate distance
+            distance = math.sqrt(
+                obstacle.position.x**2 + 
+                obstacle.position.y**2 + 
+                obstacle.position.z**2
+            )
+            
+            # Check if obstacle is in path (considering velocity direction)
+            if self.is_obstacle_in_path(obstacle):
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_obstacle = obstacle
+        
+        if closest_obstacle is None:
+            return AvoidanceAction.NONE, None
+        
+        # Determine action based on distance
+        if min_distance < self.critical_distance:
+            self.get_logger().warn(f'CRITICAL: Obstacle at {min_distance:.1f}m!')
+            return AvoidanceAction.EMERGENCY_STOP, closest_obstacle
+        elif min_distance < self.safety_distance:
+            return self.determine_avoidance_direction(closest_obstacle), closest_obstacle
+        else:
+            return AvoidanceAction.SLOW_DOWN, closest_obstacle
+    
+    def is_obstacle_in_path(self, obstacle: Obstacle) -> bool:
+        """Check if obstacle is in the drone's path"""
+        # Simple check: is obstacle in front hemisphere and moving towards it?
+        vel_magnitude = math.sqrt(
+            self.requested_velocity.linear.x**2 + 
+            self.requested_velocity.linear.y**2
+        )
+        
+        if vel_magnitude < 0.1:  # Not moving significantly
+            return False
+        
+        # Check if obstacle is in forward direction (considering UE4 coordinates)
+        # In UE4: Y is forward, X is right
+        if obstacle.position.y > 0:  # Obstacle is in front
+            # Check lateral clearance
+            lateral_distance = abs(obstacle.position.x)
+            obstacle_radius = max(obstacle.dimensions.x, obstacle.dimensions.y) / 2.0
+            
+            # Add safety margin
+            if lateral_distance < (obstacle_radius + 1.5):
+                return True
+        
+        return False
+    
+    def determine_avoidance_direction(self, obstacle: Obstacle) -> AvoidanceAction:
+        """Determine best avoidance direction"""
+        # Check lateral position of obstacle (UE4: X is right/left)
+        if obstacle.position.x > 0:  # Obstacle is to the right
+            return AvoidanceAction.TURN_LEFT
+        else:  # Obstacle is to the left
+            return AvoidanceAction.TURN_RIGHT
+        
+        # Alternative: check if we can go up
+        if obstacle.position.z < self.vertical_clearance:
+            return AvoidanceAction.GO_UP
+    
+    def apply_avoidance_action(self, action: AvoidanceAction, obstacle: Obstacle) -> Twist:
+        """Apply the avoidance action to velocity"""
+        safe_vel = Twist()
+        
+        if action == AvoidanceAction.EMERGENCY_STOP:
+            # Full stop
+            self.get_logger().error('Emergency stop!')
+            return safe_vel  # All zeros
+        
+        elif action == AvoidanceAction.STOP:
+            # Gentle stop
+            return safe_vel
+        
+        elif action == AvoidanceAction.SLOW_DOWN:
+            # Reduce speed by 50%
+            safe_vel = self.requested_velocity
+            safe_vel.linear.x *= 0.5
+            safe_vel.linear.y *= 0.5
+            
+        elif action == AvoidanceAction.TURN_LEFT:
+            # Maintain some forward speed while turning left
+            safe_vel.linear.x = self.avoidance_speed  # Left in UE4
+            safe_vel.linear.y = self.requested_velocity.linear.y * 0.3  # Reduced forward
+            self.get_logger().info('Avoiding obstacle - turning left')
+            
+        elif action == AvoidanceAction.TURN_RIGHT:
+            # Maintain some forward speed while turning right
+            safe_vel.linear.x = -self.avoidance_speed  # Right in UE4
+            safe_vel.linear.y = self.requested_velocity.linear.y * 0.3  # Reduced forward
+            self.get_logger().info('Avoiding obstacle - turning right')
+            
+        elif action == AvoidanceAction.GO_UP:
+            # Climb over obstacle
+            safe_vel.linear.z = self.avoidance_speed
+            safe_vel.linear.y = self.requested_velocity.linear.y * 0.5  # Slow forward
+            self.get_logger().info('Avoiding obstacle - climbing')
+        
+        return safe_vel
+    
+    def get_obstacle_info(self, obstacle: Obstacle) -> str:
+        """Get human-readable obstacle information"""
+        distance = math.sqrt(
+            obstacle.position.x**2 + 
+            obstacle.position.y**2 + 
+            obstacle.position.z**2
+        )
+        return f"{obstacle.type} at {distance:.1f}m"
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ObstacleAvoidanceNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

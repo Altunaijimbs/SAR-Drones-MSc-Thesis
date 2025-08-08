@@ -1,0 +1,8 @@
+# Request
+string action  # TAKEOFF or LAND
+float32 altitude  # for takeoff only
+---
+# Response
+bool success
+string message
+float32 final_altitude

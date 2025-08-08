@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleFlight Drone Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.btn-primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .btn.btn-success {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .btn.btn-danger {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .btn.btn-warning {
+            background: #f59e0b;
+            border-color: #f59e0b;
+        }
+
+        .btn.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .joystick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            gap: 5px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .joy-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .joy-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .joy-btn.stop-btn {
+            background: #ef4444;
+        }
+
+        .altitude-controls,
+        .rotation-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+
+        .info-item .label {
+            opacity: 0.8;
+        }
+
+        .info-item .value {
+            font-weight: 500;
+        }
+
+        #connection-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .mission-status {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .mission-status.active {
+            background: rgba(16, 185, 129, 0.3);
+            border: 1px solid #10b981;
+        }
+
+        .mission-status.pattern {
+            background: rgba(59, 130, 246, 0.3);
+            border: 1px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1><i class="fas fa-drone"></i> SimpleFlight Control Center</h1>
+            <div class="status-bar">
+                <span class="status-item">
+                    <span class="status-indicator" id="connection-indicator"></span>
+                    <span id="connection-status">Disconnected</span>
+                </span>
+                <span class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="current-time"></span>
+                </span>
+            </div>
+        </header>
+
+        <!-- Connection Button -->
+        <button id="connection-btn" class="btn btn-primary" onclick="toggleConnection()">
+            <i class="fas fa-plug"></i> Connect
+        </button>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Left Panel - Video & Stats -->
+            <div class="panel">
+                <!-- Video Feed -->
+                <div class="video-container">
+                    <img id="video-feed" src="/api/video_feed" alt="Drone Camera Feed">
+                    <div class="video-overlay">
+                        <span id="pattern-status">Manual Control</span>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="label">Altitude</span>
+                        <span class="value" id="altitude">0.0m</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="label">Speed</span>
+                        <span class="value" id="speed">0.0m/s</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="label">Distance</span>
+                        <span class="value" id="distance">0m</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="label">Flight Time</span>
+                        <span class="value" id="flight-time">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Position Information -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Position X:</span>
+                        <span class="value" id="pos-x">0.0m</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Position Y:</span>
+                        <span class="value" id="pos-y">0.0m</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Yaw:</span>
+                        <span class="value" id="yaw">0°</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Max Alt:</span>
+                        <span class="value" id="max-alt">0.0m</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Controls -->
+            <div class="panel">
+                <!-- Mission Status -->
+                <div class="mission-status" id="mission-status">
+                    <i class="fas fa-info-circle"></i> <span id="mission-text">IDLE</span>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="control-section">
+                    <h3>Quick Actions</h3>
+                    <div class="button-grid">
+                        <button class="btn btn-success" onclick="sendCommand('takeoff')">
+                            <i class="fas fa-plane-departure"></i> Takeoff
+                        </button>
+                        <button class="btn btn-warning" onclick="sendCommand('land')">
+                            <i class="fas fa-plane-arrival"></i> Land
+                        </button>
+                        <button class="btn btn-primary" onclick="sendCommand('set_home')">
+                            <i class="fas fa-map-marker-alt"></i> Set Home
+                        </button>
+                        <button class="btn btn-primary" onclick="sendCommand('return_home')">
+                            <i class="fas fa-home"></i> RTH
+                        </button>
+                    </div>
+                    <button class="btn btn-danger full-width" onclick="sendCommand('emergency_stop')">
+                        <i class="fas fa-exclamation-triangle"></i> EMERGENCY STOP
+                    </button>
+                </div>
+
+                <!-- Pattern Control -->
+                <div class="control-section">
+                    <h3>Pattern Flight</h3>
+                    <div class="pattern-grid">
+                        <button class="btn" onclick="sendCommand('pattern_square')">
+                            <i class="fas fa-square"></i> Square
+                        </button>
+                        <button class="btn" onclick="sendCommand('pattern_spiral')">
+                            <i class="fas fa-circle-notch"></i> Spiral
+                        </button>
+                        <button class="btn" onclick="sendCommand('pattern_zigzag')">
+                            <i class="fas fa-wave-square"></i> Zigzag
+                        </button>
+                        <button class="btn" onclick="sendCommand('pattern_search')">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                    <button class="btn btn-danger full-width" onclick="sendCommand('stop_pattern')">
+                        <i class="fas fa-stop"></i> Stop Pattern
+                    </button>
+                </div>
+
+                <!-- Manual Control -->
+                <div class="control-section">
+                    <h3>Manual Control</h3>
+                    
+                    <!-- Movement -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="text-align: center; margin-bottom: 10px; font-size: 14px; opacity: 0.8;">
+                            Movement
+                        </div>
+                        <div class="joystick-grid">
+                            <div></div>
+                            <button class="joy-btn" onclick="sendCommand('move_forward')">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <div></div>
+                            <button class="joy-btn" onclick="sendCommand('move_left')">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="joy-btn stop-btn" onclick="sendCommand('move_stop')">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                            <button class="joy-btn" onclick="sendCommand('move_right')">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <div></div>
+                            <button class="joy-btn" onclick="sendCommand('move_backward')">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <!-- Altitude -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="text-align: center; margin-bottom: 10px; font-size: 14px; opacity: 0.8;">
+                            Altitude
+                        </div>
+                        <div class="altitude-controls">
+                            <button class="btn" onclick="sendCommand('move_up')">
+                                <i class="fas fa-chevron-up"></i> Up
+                            </button>
+                            <button class="btn" onclick="sendCommand('move_down')">
+                                <i class="fas fa-chevron-down"></i> Down
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Rotation -->
+                    <div>
+                        <div style="text-align: center; margin-bottom: 10px; font-size: 14px; opacity: 0.8;">
+                            Rotation
+                        </div>
+                        <div class="rotation-controls">
+                            <button class="btn" onclick="sendCommand('rotate_left')">
+                                <i class="fas fa-undo"></i> Left
+                            </button>
+                            <button class="btn" onclick="sendCommand('rotate_right')">
+                                <i class="fas fa-redo"></i> Right
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let isConnected = false;
+        let statusInterval = null;
+
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Toggle connection
+        function toggleConnection() {
+            if (isConnected) {
+                sendCommand('disconnect');
+            } else {
+                sendCommand('connect');
+            }
+        }
+
+        // Send command to server
+        async function sendCommand(command) {
+            try {
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+                
+                const result = await response.json();
+                
+                if (command === 'connect' && result.success) {
+                    startStatusUpdates();
+                } else if (command === 'disconnect' && result.success) {
+                    stopStatusUpdates();
+                }
+                
+                console.log(result.message);
+            } catch (error) {
+                console.error('Command error:', error);
+            }
+        }
+
+        // Update status from server
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                // Update connection status
+                isConnected = status.api_enabled || false;
+                const indicator = document.getElementById('connection-indicator');
+                const connStatus = document.getElementById('connection-status');
+                const connBtn = document.getElementById('connection-btn');
+                
+                if (isConnected) {
+                    indicator.classList.remove('disconnected');
+                    connStatus.textContent = 'Connected';
+                    connBtn.innerHTML = '<i class="fas fa-plug-circle-xmark"></i> Disconnect';
+                    connBtn.classList.remove('btn-primary');
+                    connBtn.classList.add('btn-danger');
+                } else {
+                    indicator.classList.add('disconnected');
+                    connStatus.textContent = 'Disconnected';
+                    connBtn.innerHTML = '<i class="fas fa-plug"></i> Connect';
+                    connBtn.classList.remove('btn-danger');
+                    connBtn.classList.add('btn-primary');
+                }
+                
+                // Update statistics
+                document.getElementById('altitude').textContent = status.position.z.toFixed(1) + 'm';
+                
+                const speed = Math.sqrt(
+                    status.velocity.x ** 2 + 
+                    status.velocity.y ** 2
+                ).toFixed(1);
+                document.getElementById('speed').textContent = speed + 'm/s';
+                
+                document.getElementById('distance').textContent = 
+                    Math.round(status.total_distance) + 'm';
+                
+                const minutes = Math.floor(status.flight_time / 60);
+                const seconds = status.flight_time % 60;
+                document.getElementById('flight-time').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Update position
+                document.getElementById('pos-x').textContent = status.position.x.toFixed(1) + 'm';
+                document.getElementById('pos-y').textContent = status.position.y.toFixed(1) + 'm';
+                document.getElementById('yaw').textContent = status.orientation.yaw.toFixed(0) + '°';
+                document.getElementById('max-alt').textContent = status.max_altitude.toFixed(1) + 'm';
+                
+                // Update mission status
+                const missionStatus = document.getElementById('mission-status');
+                const missionText = document.getElementById('mission-text');
+                const patternStatus = document.getElementById('pattern-status');
+                
+                missionText.textContent = status.mission_status;
+                
+                if (status.pattern_active) {
+                    missionStatus.classList.add('pattern');
+                    missionStatus.classList.remove('active');
+                    patternStatus.textContent = `Pattern: ${status.pattern_type.toUpperCase()}`;
+                } else if (status.flying) {
+                    missionStatus.classList.add('active');
+                    missionStatus.classList.remove('pattern');
+                    patternStatus.textContent = 'Manual Control';
+                } else {
+                    missionStatus.classList.remove('active', 'pattern');
+                    patternStatus.textContent = 'Idle';
+                }
+                
+            } catch (error) {
+                console.error('Status update error:', error);
+            }
+        }
+
+        // Start/stop status updates
+        function startStatusUpdates() {
+            if (!statusInterval) {
+                updateStatus();
+                statusInterval = setInterval(updateStatus, 500);
+            }
+        }
+
+        function stopStatusUpdates() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+
+        // Start status updates on load
+        startStatusUpdates();
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!isConnected) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                    sendCommand('move_forward');
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    sendCommand('move_backward');
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    sendCommand('move_left');
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    sendCommand('move_right');
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    sendCommand('move_stop');
+                    break;
+                case 'q':
+                    sendCommand('move_up');
+                    break;
+                case 'e':
+                    sendCommand('move_down');
+                    break;
+                case 'z':
+                    sendCommand('rotate_left');
+                    break;
+                case 'c':
+                    sendCommand('rotate_right');
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

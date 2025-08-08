@@ -1,0 +1,9 @@
+# Request
+drone_interfaces/WaypointList mission
+bool clear_existing
+bool start_immediately
+---
+# Response
+bool success
+string message
+string mission_id

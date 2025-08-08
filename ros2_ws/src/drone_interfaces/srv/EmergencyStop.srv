@@ -1,0 +1,8 @@
+# Request
+string reason
+bool land_immediately  # true = land now, false = hover
+---
+# Response
+bool success
+string message
+string action_taken

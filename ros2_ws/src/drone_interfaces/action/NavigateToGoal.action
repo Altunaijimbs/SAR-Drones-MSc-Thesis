@@ -1,0 +1,18 @@
+# Goal
+geometry_msgs/Point target_position
+float32 target_yaw  # in degrees
+float32 speed  # m/s
+float32 tolerance  # position tolerance in meters
+---
+# Result
+bool success
+string message
+float32 final_distance_to_goal
+float32 time_elapsed  # seconds
+---
+# Feedback
+float32 distance_to_goal
+float32 current_speed
+geometry_msgs/Point current_position
+float32 estimated_time_remaining  # seconds
+string status  # APPROACHING, AVOIDING_OBSTACLE, SLOWING_DOWN

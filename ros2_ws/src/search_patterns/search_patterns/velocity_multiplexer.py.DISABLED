@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
+import time
+
+
+class VelocityMultiplexer(Node):
+    """
+    Multiplexes velocity commands from different sources with priority:
+    1. Emergency stop (highest priority)
+    2. Obstacle avoidance
+    3. Normal commands (search patterns, LLM controller)
+    """
+    
+    def __init__(self):
+        super().__init__('velocity_multiplexer')
+        
+        # Parameters
+        self.declare_parameter('timeout', 0.5)  # seconds
+        
+        # Subscribers for different command sources
+        self.normal_cmd_sub = self.create_subscription(
+            Twist,
+            '/mavros/setpoint_velocity/cmd_vel_unstamped',
+            self.normal_cmd_callback,
+            10
+        )
+        
+        self.safe_cmd_sub = self.create_subscription(
+            Twist,
+            '/mavros/setpoint_velocity/cmd_vel_unstamped_safe',
+            self.safe_cmd_callback,
+            10
+        )
+        
+        self.avoidance_status_sub = self.create_subscription(
+            Bool,
+            '/drone/obstacle_avoidance_active',
+            self.avoidance_status_callback,
+            10
+        )
+        
+        # Publisher to MAVROS
+        self.cmd_pub = self.create_publisher(
+            Twist,
+            '/mavros/setpoint_velocity/cmd_vel',
+            10
+        )
+        
+        # State
+        self.normal_cmd = Twist()
+        self.safe_cmd = Twist()
+        self.avoidance_active = False
+        self.last_normal_time = time.time()
+        self.last_safe_time = time.time()
+        
+        # Control timer at 20Hz
+        self.control_timer = self.create_timer(0.05, self.multiplex_commands)
+        
+        self.get_logger().info('Velocity Multiplexer initialized')
+    
+    def normal_cmd_callback(self, msg: Twist):
+        """Receive normal velocity commands"""
+        self.normal_cmd = msg
+        self.last_normal_time = time.time()
+    
+    def safe_cmd_callback(self, msg: Twist):
+        """Receive obstacle-avoidance adjusted commands"""
+        self.safe_cmd = msg
+        self.last_safe_time = time.time()
+    
+    def avoidance_status_callback(self, msg: Bool):
+        """Update avoidance status"""
+        self.avoidance_active = msg.data
+        if self.avoidance_active:
+            self.get_logger().debug('Obstacle avoidance active')
+    
+    def multiplex_commands(self):
+        """Select and publish appropriate velocity command"""
+        timeout = self.get_parameter('timeout').value
+        current_time = time.time()
+        
+        # Check for timeouts
+        normal_timeout = (current_time - self.last_normal_time) > timeout
+        safe_timeout = (current_time - self.last_safe_time) > timeout
+        
+        # Select command based on priority and timeouts
+        output_cmd = Twist()
+        
+        if not safe_timeout and self.avoidance_active:
+            # Use safe command when obstacle avoidance is active
+            output_cmd = self.safe_cmd
+            self.get_logger().debug('Using safe velocity command')
+        elif not normal_timeout:
+            # Use normal command
+            output_cmd = self.normal_cmd
+        else:
+            # No recent commands - hover
+            output_cmd = Twist()  # All zeros
+            if not normal_timeout or not safe_timeout:
+                self.get_logger().warn('Command timeout - hovering')
+        
+        # Publish selected command
+        self.cmd_pub.publish(output_cmd)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = VelocityMultiplexer()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

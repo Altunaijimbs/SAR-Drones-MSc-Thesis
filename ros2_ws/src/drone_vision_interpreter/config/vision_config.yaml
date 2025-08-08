@@ -1,0 +1,14 @@
+vision_to_text:
+  ros__parameters:
+    yolo_model: "yolov8m.pt"  # Options: yolov8n.pt, yolov8s.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt
+    confidence_threshold: 0.4
+    process_every_n_frames: 3  # Process every 3rd frame for performance
+    enable_visualization: true
+    camera_topic: "/airsim_node/drone_1/front_center/Scene"
+    
+object_detector:
+  ros__parameters:
+    yolo_model: "yolov8s.pt"  # Smaller model for faster obstacle detection
+    confidence_threshold: 0.5
+    camera_topic: "/airsim_node/drone_1/front_center/Scene"
+    depth_topic: "/airsim_node/drone_1/front_center/DepthPlanar"

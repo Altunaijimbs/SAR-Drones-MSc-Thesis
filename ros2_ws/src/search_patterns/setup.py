@@ -1,0 +1,61 @@
+from setuptools import find_packages, setup
+import os
+from glob import glob
+
+package_name = 'search_patterns'
+
+setup(
+    name=package_name,
+    version='0.0.0',
+    packages=find_packages(exclude=['test']),
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='mbs',
+    maintainer_email='mbs@todo.todo',
+    description='TODO: Package description',
+    license='TODO: License declaration',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'grid_search = search_patterns.grid_search:main',
+            'search_pattern_manager = search_patterns.search_pattern_manager:main',
+            'obstacle_avoidance = search_patterns.obstacle_avoidance:main',
+            'velocity_multiplexer = search_patterns.velocity_multiplexer:main',
+            'lidar_obstacle_avoidance = search_patterns.lidar_obstacle_avoidance:main',
+            'fusion_obstacle_avoidance = search_patterns.fusion_obstacle_avoidance:main',
+            'fixed_grid_search = search_patterns.fixed_grid_search:main',
+            'velocity_coordinator = search_patterns.velocity_coordinator:main',
+            'return_to_home = search_patterns.return_to_home_node:main',
+            'position_controller = search_patterns.position_controller:main',
+            'smooth_position_controller = search_patterns.smooth_position_controller:main',
+            'hybrid_position_controller = search_patterns.hybrid_position_controller:main',
+            'pattern_generator = search_patterns.pattern_generator:main',
+            'pattern_executor = search_patterns.pattern_executor:main',
+            'improved_pattern_generator = search_patterns.improved_pattern_generator:main',
+            'improved_pattern_executor = search_patterns.improved_pattern_executor:main',
+            'optimized_pattern_generator = search_patterns.optimized_pattern_generator:main',
+            'optimized_pattern_executor = search_patterns.optimized_pattern_executor:main',
+            'attitude_pattern_executor = search_patterns.attitude_pattern_executor:main',
+            'coordinated_pattern_executor = search_patterns.coordinated_pattern_executor:main',
+            'pattern_visualizer = search_patterns.pattern_visualizer:main',
+            'pattern_monitor = search_patterns.pattern_monitor:main',
+            'simple_grid_visualizer = search_patterns.simple_grid_visualizer:main',
+            'background_visualizer = search_patterns.background_visualizer:main',
+            'web_visualizer = search_patterns.web_visualizer:main',
+            'terminal_map = search_patterns.terminal_map:main',
+            'smooth_trajectory_executor = search_patterns.smooth_trajectory_executor:main',
+            'precision_pattern_executor = search_patterns.precision_pattern_executor:main',
+            'banked_pure_pursuit_executor = search_patterns.banked_pure_pursuit_executor:main',
+            'smooth_banking_executor = search_patterns.smooth_banking_executor:main',
+            'coordinated_banking_executor = search_patterns.coordinated_banking_executor:main',
+            'fixed_movement_executor = search_patterns.fixed_movement_executor:main',
+            'airsim_native_executor = search_patterns.airsim_native_executor:main',
+        ],
+    },
+)

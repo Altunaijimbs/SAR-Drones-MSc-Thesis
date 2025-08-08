@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drone Pattern Map</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        
+        #mapContainer {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 600px;
+            background-color: #0a0a0a;
+            border: 2px solid #444;
+            border-radius: 4px;
+        }
+        
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="mapContainer">
+        <h1>🗺️ Drone Movement Map</h1>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #00ff00;"></div>
+                <span>Planned Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #0088ff;"></div>
+                <span>Actual Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff0000; width: 10px; height: 10px; border-radius: 50%;"></div>
+                <span>Current Position</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ffff00; width: 8px; height: 8px; border-radius: 50%;"></div>
+                <span>Target Waypoint</span>
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+        
+        <div id="status">
+            Position: <span id="position">0.0, 0.0, 0.0</span> | 
+            Pattern: <span id="pattern">None</span> | 
+            Waypoint: <span id="waypoint">0/0</span>
+        </div>
+        
+        <div class="controls">
+            <button onclick="clearPath()">Clear Path</button>
+            <button onclick="centerView()">Center View</button>
+            <button onclick="toggleFollow()">Toggle Follow: <span id="followStatus">ON</span></button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize canvas to actual size
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // State
+        let dronePosition = {x: 0, y: 0, z: 0};
+        let dronePath = [];
+        let waypoints = [];
+        let currentWaypointIndex = 0;
+        let isExecuting = false;
+        let followDrone = true;
+        
+        // View settings
+        let viewOffset = {x: canvas.width / 2, y: canvas.height / 2};
+        let scale = 10; // pixels per meter
+        
+        // WebSocket connection
+        let ws = null;
+        
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:5001/pattern_ws');
+            
+            ws.onopen = () => {
+                console.log('Connected to pattern WebSocket');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'position') {
+                    dronePosition = data.position;
+                    dronePath.push({x: dronePosition.x, y: dronePosition.y});
+                    
+                    // Limit path length
+                    if (dronePath.length > 1000) {
+                        dronePath.shift();
+                    }
+                    
+                    document.getElementById('position').textContent = 
+                        `${dronePosition.x.toFixed(1)}, ${dronePosition.y.toFixed(1)}, ${dronePosition.z.toFixed(1)}`;
+                }
+                else if (data.type === 'waypoints') {
+                    waypoints = data.waypoints;
+                }
+                else if (data.type === 'status') {
+                    isExecuting = data.executing;
+                    currentWaypointIndex = data.current_waypoint - 1;
+                    document.getElementById('pattern').textContent = isExecuting ? 'Active' : 'Inactive';
+                    document.getElementById('waypoint').textContent = 
+                        `${data.current_waypoint}/${data.total_waypoints}`;
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 1000);
+            };
+        }
+        
+        // For demo purposes, simulate data if WebSocket not available
+        function simulateData() {
+            // Simulate drone movement
+            setInterval(() => {
+                dronePosition.x += (Math.random() - 0.5) * 0.5;
+                dronePosition.y += (Math.random() - 0.5) * 0.5;
+                dronePath.push({x: dronePosition.x, y: dronePosition.y});
+                
+                if (dronePath.length > 500) {
+                    dronePath.shift();
+                }
+                
+                document.getElementById('position').textContent = 
+                    `${dronePosition.x.toFixed(1)}, ${dronePosition.y.toFixed(1)}, ${dronePosition.z.toFixed(1)}`;
+            }, 100);
+        }
+        
+        function worldToScreen(worldX, worldY) {
+            return {
+                x: worldX * scale + viewOffset.x,
+                y: -worldY * scale + viewOffset.y // Flip Y axis
+            };
+        }
+        
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            const gridSize = 5 * scale; // 5 meter grid
+            
+            for (let x = viewOffset.x % gridSize; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = viewOffset.y % gridSize; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw origin
+            const origin = worldToScreen(0, 0);
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 10, origin.y);
+            ctx.lineTo(origin.x + 10, origin.y);
+            ctx.moveTo(origin.x, origin.y - 10);
+            ctx.lineTo(origin.x, origin.y + 10);
+            ctx.stroke();
+            
+            // Draw waypoints and planned path
+            if (waypoints.length > 0) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                
+                for (let i = 0; i < waypoints.length; i++) {
+                    const pos = worldToScreen(waypoints[i].x, waypoints[i].y);
+                    if (i === 0) {
+                        ctx.moveTo(pos.x, pos.y);
+                    } else {
+                        ctx.lineTo(pos.x, pos.y);
+                    }
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw waypoint markers
+                ctx.fillStyle = '#00ff00';
+                for (let i = 0; i < waypoints.length; i++) {
+                    const pos = worldToScreen(waypoints[i].x, waypoints[i].y);
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Highlight current target
+                if (isExecuting && currentWaypointIndex >= 0 && currentWaypointIndex < waypoints.length) {
+                    const target = waypoints[currentWaypointIndex];
+                    const pos = worldToScreen(target.x, target.y);
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw actual path
+            if (dronePath.length > 1) {
+                ctx.strokeStyle = '#0088ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                for (let i = 0; i < dronePath.length; i++) {
+                    const pos = worldToScreen(dronePath[i].x, dronePath[i].y);
+                    if (i === 0) {
+                        ctx.moveTo(pos.x, pos.y);
+                    } else {
+                        ctx.lineTo(pos.x, pos.y);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Draw current position
+            const currentPos = worldToScreen(dronePosition.x, dronePosition.y);
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(currentPos.x, currentPos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw drone heading indicator
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(currentPos.x, currentPos.y);
+            ctx.lineTo(currentPos.x + 15, currentPos.y);
+            ctx.stroke();
+            
+            // Update view to follow drone
+            if (followDrone) {
+                viewOffset.x = canvas.width / 2 - dronePosition.x * scale;
+                viewOffset.y = canvas.height / 2 + dronePosition.y * scale;
+            }
+            
+            requestAnimationFrame(draw);
+        }
+        
+        // Control functions
+        function clearPath() {
+            dronePath = [];
+        }
+        
+        function centerView() {
+            viewOffset.x = canvas.width / 2 - dronePosition.x * scale;
+            viewOffset.y = canvas.height / 2 + dronePosition.y * scale;
+        }
+        
+        function toggleFollow() {
+            followDrone = !followDrone;
+            document.getElementById('followStatus').textContent = followDrone ? 'ON' : 'OFF';
+        }
+        
+        // Mouse controls for panning
+        let isDragging = false;
+        let dragStart = {x: 0, y: 0};
+        let dragOffset = {x: 0, y: 0};
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            followDrone = false;
+            document.getElementById('followStatus').textContent = 'OFF';
+            dragStart.x = e.clientX;
+            dragStart.y = e.clientY;
+            dragOffset.x = viewOffset.x;
+            dragOffset.y = viewOffset.y;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                viewOffset.x = dragOffset.x + (e.clientX - dragStart.x);
+                viewOffset.y = dragOffset.y + (e.clientY - dragStart.y);
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        // Mouse wheel for zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomSpeed = 0.1;
+            const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+            scale = Math.max(2, Math.min(50, scale + scale * delta));
+        });
+        
+        // Start
+        //connectWebSocket();
+        simulateData(); // Remove this line when WebSocket is implemented
+        draw();
+    </script>
+</body>
+</html>

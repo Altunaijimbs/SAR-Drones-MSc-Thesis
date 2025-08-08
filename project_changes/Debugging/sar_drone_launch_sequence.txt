@@ -1,0 +1,130 @@
+# LLM-Controlled SAR Drone System - Launch Sequence
+# MSc Thesis Project - August 2025
+
+## System Overview
+- Cosys-AirSim on Unreal Engine 5.5 for simulation
+- PX4 SITL for flight control
+- ROS2 Humble for system integration
+- MAVROS for PX4-ROS2 bridge (UDP connection)
+- Custom packages for vision and LLM control
+
+## Directory Structure
+- Cosys-AirSim: /home/mbs/Desktop/airsim/Cosys-AirSim/
+- ROS2 Workspace: /home/mbs/SAR-Drones-MSc-Thesis/ros2_ws/
+- PX4: ~/PX4-Autopilot/
+- AirSim Settings: ~/Documents/AirSim/settings.json
+
+## LAUNCH SEQUENCE (Must follow this order!)
+
+### Terminal 1: Unreal Engine 5.5
+# Start Unreal Editor with the Cosys-AirSim project
+# Press 'Play' button to start simulation
+# Keep this running throughout
+
+### Terminal 2: PX4 SITL
+cd ~/PX4-Autopilot
+make px4_sitl none_iris
+# Wait for "pxh>" prompt before proceeding
+# This starts PX4 listening on UDP port 14540
+
+### Terminal 3: AirSim ROS2 Wrapper
+cd /home/mbs/Desktop/airsim/Cosys-AirSim/ros2
+source install/setup.bash
+ros2 launch airsim_ros_pkgs airsim_node.launch.py
+# Wait for "AirsimROSWrapper Initialized!" message
+
+### Terminal 4: MAVROS (UDP Connection)
+# CRITICAL: Use UDP, not TCP!
+ros2 run mavros mavros_node --ros-args \
+  --param fcu_url:="udp://:14550@127.0.0.1:14540" \
+  --param target_system_id:=1 \
+  --param target_component_id:=1
+# This connects MAVROS to PX4 via UDP
+
+### Terminal 5: Keep-Alive Node (Maintains OFFBOARD mode)
+cd /home/mbs/SAR-Drones-MSc-Thesis/ros2_ws
+source install/setup.bash
+ros2 run llm_controller keep_alive_node
+# This publishes continuous velocity commands at 20Hz
+
+### Terminal 6: Arm Drone and Set Mode
+# Wait for all nodes to be running, then:
+ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'OFFBOARD'}"
+ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
+
+# Make drone takeoff to safe altitude:
+ros2 topic pub /simple_command std_msgs/msg/String "data: 'up'" --once
+# Wait 3-5 seconds, then:
+ros2 topic pub /simple_command std_msgs/msg/String "data: 'stop'" --once
+
+### Terminal 7: Vision Pipeline
+cd /home/mbs/SAR-Drones-MSc-Thesis/ros2_ws
+source install/setup.bash
+ros2 launch drone_vision_interpreter vision_pipeline.launch.py \
+  camera_topic:=/airsim_node/PX4/front_center_Scene/image
+# This starts YOLO object detection
+
+### Terminal 8: LLM Controller
+cd /home/mbs/SAR-Drones-MSc-Thesis/ros2_ws
+source install/setup.bash
+ros2 launch llm_controller llm_controller.launch.py \
+  velocity_topic:=/llm/velocity_command
+# This enables natural language control
+
+## TESTING THE SYSTEM
+
+### Send Natural Language Commands:
+ros2 topic pub /llm/command_input std_msgs/msg/String "data: 'fly forward'" --once
+ros2 topic pub /llm/command_input std_msgs/msg/String "data: 'search for people'" --once
+ros2 topic pub /llm/command_input std_msgs/msg/String "data: 'fly to the right'" --once
+
+### Monitor System:
+# View camera with bounding boxes:
+ros2 run rqt_image_view rqt_image_view
+# Select: /drone/vision/debug_image
+
+# Check scene descriptions:
+ros2 topic echo /drone/scene_description
+
+# Monitor drone state:
+ros2 topic echo /mavros/state
+
+## IMPORTANT NOTES
+
+1. COORDINATE TRANSFORMATION:
+   - ROS forward (X) → UE forward (-Y)
+   - ROS right (Y) → UE right (X)
+   - ROS up (Z) → UE up (Z)
+   - Handled in llm_controller_node.py execute_command()
+
+2. KEY TOPICS:
+   - Camera: /airsim_node/PX4/front_center_Scene/image
+   - Velocity: /mavros/setpoint_velocity/cmd_vel_unstamped
+   - LLM input: /llm/command_input
+   - Scene info: /drone/scene_description
+
+3. TROUBLESHOOTING:
+   - If PX4 won't arm: run "commander arm -f" in PX4 console
+   - If drone auto-disarms: ensure keep_alive_node is running
+   - If MAVROS won't connect: kill all mavros processes and retry with UDP
+
+4. SHUTDOWN SEQUENCE:
+   - Ctrl+C all ROS2 nodes
+   - Stop PX4 SITL
+   - Then stop Unreal Engine Play mode
+
+## PACKAGE DEPENDENCIES
+- drone_interfaces: Custom messages
+- drone_vision_interpreter: YOLO vision
+- llm_controller: Natural language processing
+- Python: numpy==1.26.4, opencv-python==4.8.1.78, ultralytics (YOLO)
+- Optional: openai (for GPT integration)
+
+## FOR DEVELOPMENT
+Main development happens in:
+/home/mbs/SAR-Drones-MSc-Thesis/ros2_ws/src/
+
+Build after changes:
+cd /home/mbs/SAR-Drones-MSc-Thesis/ros2_ws
+colcon build --packages-select <package_name>
+source install/setup.bash

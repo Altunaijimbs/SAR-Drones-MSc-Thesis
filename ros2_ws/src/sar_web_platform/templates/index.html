@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAR Drone Control Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1><i class="fas fa-helicopter"></i> SAR Drone Control Platform</h1>
+            <div class="status-bar">
+                <span class="status-item">
+                    <i class="fas fa-wifi"></i>
+                    <span id="connection-status">Disconnected</span>
+                </span>
+                <span class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="current-time"></span>
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Left Panel - Video & Status -->
+            <div class="left-panel">
+                <!-- Video Feed -->
+                <div class="video-container">
+                    <img id="video-feed" src="/api/video_feed" alt="Drone Camera Feed">
+                    <div class="video-overlay">
+                        <span id="detection-count">No detections</span>
+                    </div>
+                </div>
+
+                <!-- Drone Status -->
+                <div class="status-panel">
+                    <h3>Drone Status</h3>
+                    <div class="status-grid">
+                        <div class="status-card">
+                            <i class="fas fa-power-off"></i>
+                            <span class="label">Armed</span>
+                            <span class="value" id="armed-status">NO</span>
+                        </div>
+                        <div class="status-card">
+                            <i class="fas fa-gamepad"></i>
+                            <span class="label">Mode</span>
+                            <span class="value" id="mode-status">UNKNOWN</span>
+                        </div>
+                        <div class="status-card">
+                            <i class="fas fa-battery-full"></i>
+                            <span class="label">Battery</span>
+                            <span class="value" id="battery-status">100%</span>
+                        </div>
+                        <div class="status-card">
+                            <i class="fas fa-satellite"></i>
+                            <span class="label">GPS</span>
+                            <span class="value" id="gps-status">OK</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Position Info -->
+                    <div class="position-info">
+                        <h4>Position</h4>
+                        <div class="coordinates">
+                            <span>X: <span id="pos-x">0.0</span>m</span>
+                            <span>Y: <span id="pos-y">0.0</span>m</span>
+                            <span>Alt: <span id="pos-z">0.0</span>m</span>
+                        </div>
+                        <div class="home-position">
+                            <span>Home: <span id="home-status">Not Set</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Controls -->
+            <div class="right-panel">
+                <!-- Quick Actions -->
+                <div class="control-section">
+                    <h3>Quick Actions</h3>
+                    <div class="button-grid">
+                        <button class="btn btn-primary" onclick="sendCommand('arm')">
+                            <i class="fas fa-unlock"></i> Arm
+                        </button>
+                        <button class="btn btn-danger" onclick="sendCommand('disarm')">
+                            <i class="fas fa-lock"></i> Disarm
+                        </button>
+                        <button class="btn btn-success" onclick="sendCommand('takeoff')">
+                            <i class="fas fa-plane-departure"></i> Takeoff
+                        </button>
+                        <button class="btn btn-warning" onclick="sendCommand('land')">
+                            <i class="fas fa-plane-arrival"></i> Land
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mission Control -->
+                <div class="control-section">
+                    <h3>Mission Control</h3>
+                    <div class="mission-status">
+                        Status: <span id="mission-status">IDLE</span>
+                    </div>
+                    <div class="button-grid">
+                        <button class="btn btn-primary" onclick="sendCommand('start_search')">
+                            <i class="fas fa-search"></i> Start Search
+                        </button>
+                        <button class="btn btn-secondary" onclick="sendCommand('stop_search')">
+                            <i class="fas fa-stop"></i> Stop Search
+                        </button>
+                        <button class="btn btn-info" onclick="sendCommand('return_home')">
+                            <i class="fas fa-home"></i> Return Home
+                        </button>
+                        <button class="btn btn-danger" onclick="sendCommand('emergency_stop')">
+                            <i class="fas fa-exclamation-triangle"></i> EMERGENCY
+                        </button>
+                    </div>
+                    <button class="btn btn-secondary full-width" onclick="sendCommand('set_home')">
+                        <i class="fas fa-map-marker-alt"></i> Set Current as Home
+                    </button>
+                </div>
+
+                <!-- Manual Control -->
+                <div class="control-section">
+                    <h3>Manual Control</h3>
+                    <div class="control-tabs">
+                        <!-- Movement Controls -->
+                        <div class="control-group">
+                            <h4>Movement</h4>
+                            <div class="joystick-grid">
+                                <div></div>
+                                <button class="joy-btn" onclick="sendCommand('move_forward')" title="Move Forward">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <div></div>
+                                <button class="joy-btn" onclick="sendCommand('move_left')" title="Move Left">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <button class="joy-btn stop-btn" onclick="sendCommand('move_stop')" title="Stop">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                                <button class="joy-btn" onclick="sendCommand('move_right')" title="Move Right">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                                <div></div>
+                                <button class="joy-btn" onclick="sendCommand('move_backward')" title="Move Backward">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <div></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Altitude Controls -->
+                        <div class="control-group">
+                            <h4>Altitude</h4>
+                            <div class="altitude-controls">
+                                <button class="joy-btn altitude-btn" onclick="sendCommand('move_up')" title="Ascend">
+                                    <i class="fas fa-chevron-up"></i><br>Ascend
+                                </button>
+                                <button class="joy-btn altitude-btn" onclick="sendCommand('move_down')" title="Descend">
+                                    <i class="fas fa-chevron-down"></i><br>Descend
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Rotation Controls -->
+                        <div class="control-group">
+                            <h4>Rotation (Yaw)</h4>
+                            <div class="rotation-controls">
+                                <button class="joy-btn rotation-btn" onclick="sendCommand('rotate_left')" title="Rotate Left">
+                                    <i class="fas fa-undo"></i><br>Rotate Left
+                                </button>
+                                <button class="joy-btn rotation-btn" onclick="sendCommand('rotate_right')" title="Rotate Right">
+                                    <i class="fas fa-redo"></i><br>Rotate Right
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Natural Language Control -->
+                <div class="control-section">
+                    <h3>Natural Language Control</h3>
+                    <div class="nlp-input">
+                        <input type="text" id="nlp-command" placeholder="e.g., 'Search for people in the area'">
+                        <button class="btn btn-primary" onclick="sendNLPCommand()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Controller -->
+                <div class="control-section">
+                    <h3>Active Controller</h3>
+                    <div class="active-controller" id="active-controller">
+                        <i class="fas fa-gamepad"></i> <span id="controller-source">None</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Log Panel -->
+        <div class="log-panel">
+            <h3>System Log</h3>
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Request
+bool include_history
+int32 history_count  # number of previous scenes to include
+---
+# Response
+drone_interfaces/SceneDescription current_scene
+drone_interfaces/SceneDescription[] scene_history
+bool success
+string message

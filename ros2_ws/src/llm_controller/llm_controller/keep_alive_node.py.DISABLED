@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+import time
+
+class KeepAliveNode(Node):
+    def __init__(self):
+        super().__init__('keep_alive_node')
+        self.vel_pub = self.create_publisher(Twist, '/mavros/setpoint_velocity/cmd_vel_unstamped', 10)
+        self.timer = self.create_timer(0.05, self.publish_velocity)  # 20 Hz
+        self.current_velocity = Twist()
+        self.velocity_end_time = 0
+        
+        # Subscribe to simple commands
+        self.cmd_sub = self.create_subscription(
+            String,
+            '/simple_command',
+            self.command_callback,
+            10
+        )
+        
+        # Subscribe to LLM velocity commands
+        self.llm_vel_sub = self.create_subscription(
+            Twist,
+            '/llm/velocity_command',
+            self.llm_velocity_callback,
+            10
+        )
+        
+        self.get_logger().info('Keep-alive node started')
+        
+    def publish_velocity(self):
+        # Check if we should stop
+        if self.velocity_end_time > 0 and time.time() > self.velocity_end_time:
+            self.current_velocity = Twist()
+            self.velocity_end_time = 0
+            self.get_logger().info('Stopping - duration expired')
+            
+        self.vel_pub.publish(self.current_velocity)
+        
+    def command_callback(self, msg):
+        cmd = msg.data.lower()
+        self.current_velocity = Twist()
+        
+        if "forward" in cmd:
+            self.current_velocity.linear.x = 0.5
+        elif "back" in cmd:
+            self.current_velocity.linear.x = -0.5
+        elif "stop" in cmd:
+            self.current_velocity = Twist()
+        elif "up" in cmd:
+            self.current_velocity.linear.z = 0.5
+        elif "down" in cmd:
+            self.current_velocity.linear.z = -0.5
+            
+        self.get_logger().info(f'Command: {cmd}, Velocity: x={self.current_velocity.linear.x}, z={self.current_velocity.linear.z}')
+    
+    def llm_velocity_callback(self, msg):
+        # Update velocity from LLM
+        self.current_velocity = msg
+        # Set duration (default 3 seconds)
+        self.velocity_end_time = time.time() + 3.0
+        self.get_logger().info(f'LLM velocity: x={msg.linear.x}, y={msg.linear.y}, z={msg.linear.z}')
+
+def main():
+    rclpy.init()
+    node = KeepAliveNode()
+    rclpy.spin(node)
+
+if __name__ == '__main__':
+    main()

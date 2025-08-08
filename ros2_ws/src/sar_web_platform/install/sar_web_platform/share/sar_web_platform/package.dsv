@@ -1,0 +1,12 @@
+source;share/sar_web_platform/hook/path.ps1
+source;share/sar_web_platform/hook/path.dsv
+source;share/sar_web_platform/hook/path.sh
+source;share/sar_web_platform/hook/pythonpath.ps1
+source;share/sar_web_platform/hook/pythonpath.dsv
+source;share/sar_web_platform/hook/pythonpath.sh
+source;share/sar_web_platform/hook/pythonscriptspath.ps1
+source;share/sar_web_platform/hook/pythonscriptspath.dsv
+source;share/sar_web_platform/hook/pythonscriptspath.sh
+source;share/sar_web_platform/hook/ament_prefix_path.ps1
+source;share/sar_web_platform/hook/ament_prefix_path.dsv
+source;share/sar_web_platform/hook/ament_prefix_path.sh
