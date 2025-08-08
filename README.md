@@ -172,14 +172,14 @@ MSc Thesis, [Your University].
 This project is part of an MSc thesis. Please contact the author for usage permissions.
 
 ## 👤 Author
-[Your Name]  
-MSc Robotics Student  
-[Your University]  
-[Your Email]
+Mohamed Alteneiji 
+MSc AI and CS Student  
+University Of Birmingham
+Mohamed.alteneijiii@gmail.com
 
 ## 🙏 Acknowledgments
-- Supervisor: [Supervisor Name]
-- Institution: [University Name]
+- Supervisor: Sauleh Eetemadi
+- Institution: University of Birmingham
 - Framework: ROS2, PX4, AirSim, UE5
 
 ---
