@@ -164,8 +164,8 @@ ros2 topic echo /pattern_status
 ## 📝 Citation
 If you use this work in your research, please cite:
 ```
-[Your Name]. (2025). Autonomous Search and Rescue Drone System. 
-MSc Thesis, [Your University].
+Mohamed Alteneiji. (2025). Autonomous Search and Rescue Drone System. 
+MSc Thesis, University of Birmingham.
 ```
 
 ## 📄 License
