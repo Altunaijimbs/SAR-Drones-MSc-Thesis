@@ -173,8 +173,11 @@ This project is part of an MSc thesis. Please contact the author for usage permi
 
 ## 👤 Author
 Mohamed Alteneiji 
+
 MSc AI and CS Student  
+
 University Of Birmingham
+
 Mohamed.alteneijiii@gmail.com
 
 ## 🙏 Acknowledgments
