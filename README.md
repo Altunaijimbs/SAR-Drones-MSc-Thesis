@@ -171,17 +171,18 @@ MSc Thesis, [Your University].
 ## 📄 License
 This project is part of an MSc thesis. Please contact the author for usage permissions.
 
-## 👤 Author
-[Your Name]  
-MSc Robotics Student  
-[Your University]  
-[Your Email]
+👤 Author
+Mohamed Alteneiji
 
-## 🙏 Acknowledgments
-- Supervisor: [Supervisor Name]
-- Institution: [University Name]
-- Framework: ROS2, PX4, AirSim, UE5
+MSc AI and CS Student
 
----
-**Thesis Submission Deadline:** August 15, 2025  
-**Status:** Final testing and documentation phase
+University Of Birmingham
+
+Mohamed.alteneijiii@gmail.com
+
+🙏 Acknowledgments
+Supervisor: Sauleh Eetemadi
+Institution: University of Birmingham
+Framework: ROS2, PX4, AirSim, UE5
+Thesis Submission Deadline: Sep 8, 2025
+Status: Final testing and documentation phase
