@@ -40,7 +40,7 @@ SAR-Drones-MSc-Thesis/
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/[your-username]/SAR-Drones-MSc-Thesis.git
+git clone https://github.com/altunaijimbs/SAR-Drones-MSc-Thesis.git
 cd SAR-Drones-MSc-Thesis
 
 # Build ROS2 workspace
@@ -164,8 +164,8 @@ ros2 topic echo /pattern_status
 ## 📝 Citation
 If you use this work in your research, please cite:
 ```
-[Your Name]. (2025). Autonomous Search and Rescue Drone System. 
-MSc Thesis, [Your University].
+Mohamed Alteneiji. (2025). Autonomous Search and Rescue Drone System. 
+MSc Thesis, University of Birmingham.
 ```
 
 ## 📄 License
